@@ -1,0 +1,28 @@
+{
+  "name": "r-customizer",
+  "version": "0.0.1",
+  "authors": [
+    "John Archer <jahglow@gmail.com>"
+  ],
+  "description": "An element providing automatic customization to Reportal elements that have API",
+  "keywords": [
+    "web-component",
+    "polymer",
+    "seed"
+  ],
+  "main": "r-customizer.html",
+  "license": "http://polymer.github.io/LICENSE.txt",
+  "homepage": "https://github.com/jahglow/r-customizer/",
+  "ignore": [
+    "/.*",
+    "/test/"
+  ],
+  "dependencies": {
+    "polymer": "Polymer/polymer#^1.4.0",
+    "iron-signals": "PolymerElements/iron-signals#^1.0.3"
+  },
+  "devDependencies": {
+    "iron-component-page": "PolymerElements/iron-component-page#^1.0.0",
+    "web-component-tester": "*"
+  }
+}
