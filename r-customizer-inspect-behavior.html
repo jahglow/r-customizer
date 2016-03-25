@@ -10,7 +10,6 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
 
 <link rel="import" href="../polymer/polymer.html">
 
-
 <script>
     var Confirmit = Confirmit || {};
 
@@ -28,11 +27,15 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
                 reflectToAttribute:true
             }
         },
+        /**
+         * @event {CustomEvent} iron-signal
+         * */
         _reportTap:function(event){
             console.log(Polymer.dom(event));
             event.stopImmediatePropagation();
             var _path = Polymer.dom(event).path;
             var path = _path.filter(function(pathItem){ return pathItem.customizable});
+            console.log(path);
             if(path.length>0){this.fire('iron-signal',{name: 'customize', data:{path: path}})}
         }
     };

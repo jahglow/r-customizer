@@ -8,6 +8,10 @@ Code distributed by Google as part of the polymer project is also
 subject to an additional IP rights grant found at http://polymer.github.io/PATENTS.txt
 -->
 <link rel="import" href="../polymer/polymer.html">
+<link rel="import" href="../iron-signals/iron-signals.html">
+<link rel="import" href="../iron-flex-layout/iron-flex-layout.html">
+<link rel="import" href="../paper-input/paper-input.html">
+<link rel="import" href="../paper-toggle-button/paper-toggle-button.html">
 
 <!--
 An element providing a solution to no problem in particular.
@@ -28,23 +32,54 @@ Example:
       display: block;
       box-sizing: border-box;
     }
-
-    .author img {
-      float: left;
-      margin-right: 5px;
-      max-height: 100px;
-      max-width: 100px;
+    /*generic customizer outlines for elements*/
+    *[customizable]:hover{
+      border-radius:inherit;
+      outline: 3px dashed #0b97c4;
     }
+    *[customizable]:hover::before, * ::content *[customizable]:hover::before{
+      position:absolute;
+      font-size: 10px;
+      padding:5px;
+      line-height:10px;
+      display: inline-block;
+      color:white;
+      z-index:100;
+      top:-20px;left:0;
+      background-color: #0b97c4;
+    }
+    :host #breadcrumbs{
+      @apply(--layout-horizontal-reverse);
+    }
+    :host #breadcrumbs .crumb:not(.active){
+      cursor:pointer;
+    }
+    :host #breadcrumbs .crumb:not(.active)::after{
+      content:'\203A';
+      padding: 0 4px;
+      cursor: default;
+    }
+    :host #breadcrumbs .crumb.active{
+      font-weight:bold;
+    }
+
   </style>
 
   <template>
-    <h1>&lt;r-customizer&gt;</h1>
-    <content></content>
-    <p class="author">
-      <img src="{{author.image}}">
-      Cheers,<br/>
-      <span class="name">{{author.name}}</span>
-    </p>
+    <iron-signals on-iron-signal-customize="_initCustomizer"></iron-signals>
+
+    <div id="breadcrumbs"></div>
+    <div id="inspector"></div>
+
+    <template id="stringTemplate">
+      <paper-input type="text" value="[[data.value]]" label="[[data.label]]" prop="[[data.label]]"></paper-input>
+    </template>
+    <template id="numberTemplate">
+      <paper-input type="number" value="[[data.value]]" label="[[data.label]]" prop="[[data.label]]"></paper-input>
+    </template>
+    <template id="booleanTemplate">
+      <paper-toggle-button checked="[[data.checked]]" prop="[[data.label]]">[[data.label]]</paper-toggle-button>
+    </template>
   </template>
 
 </dom-module>
@@ -54,99 +89,127 @@ Example:
   Polymer({
 
     is: 'r-customizer',
+    behaviors:[Polymer.Templatizer],
+    listeners: {
+      'change':'_propagateValue'
+    },
 
     properties: {
 
-      /**
-       * `fancy` indicates that the element should don a monocle and tophat,
-       * while checking its pocket watch.
-       */
-      fancy: Boolean,
 
       /**
-       * Describes the author of the element, but is really just an excuse to
-       * show off JSDoc annotations.
-       *
-       * @type {{name: string, image: string}}
+       * An element under inspection currently (the first in the chain from click-target with customizable attribute)
+       * @type {HTMLElement} inspectedElement
        */
-      author: {
+      inspectedElement:{
         type: Object,
-        // Use `value` to provides a default value for a property, by setting it
-        // on your element's prototype.
-        //
-        // If you provide a function, as we do here, Polymer will call that
-        // _per element instance_.
-        //
-        // We do that to ensure that each element gets its own copy of the
-        // value, rather than having it shared across all instances (via the
-        // prototype).
-        value: function() {
-          return {
-            name:  'Dimitri Glazkov',
-            image: 'http://addyosmani.com/blog/wp-content/uploads/2013/04/unicorn.jpg',
-          };
-        }
+        observer: '_inspectElement'
       },
-
+      /**
+       * Array of customizable HTMLElements starting with the click-target and ending with it's topmost customizable host.
+       * @type {[HTMLElement]} path
+       * */
+      path:Array
     },
-
-    // Element Lifecycle
-
-    ready: function() {
-      // `ready` is called after all elements have been configured, but
-      // propagates bottom-up. This element's children are ready, but parents
-      // are not.
-      //
-      // This is the point where you should make modifications to the DOM (when
-      // necessary), or kick off any processes the element wants to perform.
-    },
-
-    attached: function() {
-      // `attached` fires once the element and its parents have been inserted
-      // into a document.
-      //
-      // This is a good place to perform any work related to your element's
-      // visual state or active behavior (measuring sizes, beginning animations,
-      // loading resources, etc).
-    },
-
-    detached: function() {
-      // The analog to `attached`, `detached` fires when the element has been
-      // removed from a document.
-      //
-      // Use this to clean up anything you did in `attached`.
-    },
-
-    // Element Behavior
+    observers:[
+      '_constructBreadcrumb(path.splices)'
+    ],
 
     /**
-     * The `r-customizer-lasers` event is fired whenever `fireLasers` is called.
-     *
-     * @event r-customizer-lasers
-     * @detail {{sound: String}}
-     */
-
-    /**
-     * Sometimes it's just nice to say hi.
-     *
-     * @param {string} greeting A positive greeting.
-     * @return {string} The full greeting.
-     */
-    sayHello: function(greeting) {
-      var response = greeting || 'Hello World!';
-      return 'r-customizer says, ' + response;
+     * assigns `path` to the one in `detail`
+     * @method _initCustomizer
+     * @param {CustomEvent} event `iron-signal` event
+     * @param {{path: Array}} detail `detail` from `iron-signal` event
+     * */
+    _initCustomizer:function(event, detail){
+      this.path = detail.path;
     },
-
     /**
-     * Attempts to destroy this element's enemies with an any beam of light!
-     *
-     * Or, at least, dispatches an event in the vain hope that someone else will
-     * do the zapping.
-     */
-    fireLasers: function() {
-      this.fire('r-customizer-lasers', {sound: 'Pew pew!'});
+     * @method _inspectElement
+     * @param {HTMLElement} element element to be inspected.
+     * */
+    _inspectElement:function(element){
+      console.log('inspecting '+ element.localName);
+      var info=element._propertyInfo;
+      var nodesL=Polymer.dom(this.$.inspector).childNodes.length;
+      if(nodesL>0){
+        while(nodesL--) Polymer.dom(this.$.inspector).removeChild(Polymer.dom(this.$.inspector).childNodes[nodesL]);
+      }
+      for(var property in info){
+        if(property.indexOf('_')===-1
+                && property!=='customizable'
+                && info[property].type
+                && info[property].type.name!=="Function"
+                && info[property].type.name!=="Object"
+                && info[property].type.name!=="Array"
+                && !info[property].readOnly){
+          //console.log(property);
+          this._stampPropertyTemplate(property, element);
+        }
+      }
+    },
+    /**
+     * Stamps template based on property type
+     * @param {String} property property in question
+     * @param {Element} element inspected element
+     * */
+    _stampPropertyTemplate:function(property, element){
+      var config = element._config, type=element.getPropertyInfo(property).type.name.toLowerCase();
+      if(type==='string' || type === 'number'){
+        var originalProperty;
+        if(element.properties) originalProperty = element.properties[property];
+        if(!originalProperty && element.behaviors) originalProperty=element.behaviors.map(function(behavior){ if(behavior.properties && behavior.properties[property]){return behavior.properties[property]}}).filter(function(item){return typeof item==='object'})[0];
+        if(originalProperty && originalProperty.meta){console.log(originalProperty.meta)}
+      }
+      this.templatize(this.$[type+'Template']);
+      switch(element.getPropertyInfo(property).type.name){
+        case 'String': case 'Number':
+        Polymer.dom(this.$.inspector).appendChild(this.stamp({data:{label: property, value:config[property]}}).root);
+        break;
+        case 'Boolean':
+          Polymer.dom(this.$.inspector).appendChild(this.stamp({data:{label: property, checked:config[property]}}).root);
+          break;
+      }
+    },
+    /**
+     * Returns changed value to the inspected object
+     * */
+    _propagateValue:function(event){
+      console.log(Polymer.dom(event));
+      var target = Polymer.dom(event).rootTarget.domHost!==this? Polymer.dom(event).rootTarget.domHost : Polymer.dom(event).rootTarget; //normalize target that fired the event
+      var property = target.prop, el = this.inspectedElement;
+      switch(this.inspectedElement.getPropertyInfo(property).type.name){
+        case 'Boolean':
+          el._configValue('property',target.checked);
+          el[property] = target.checked;
+          break;
+        case 'String': case 'Number':
+        el._configValue('property',target.value);
+        el[property] = target.value;
+        break;
+
+      }
+    },
+    /**
+     * Builds a breadcrumb of elements that can be inspected starting with the clicked one.
+     * */
+    _constructBreadcrumb:function(splices){
+      if(this.$.breadcrumbs.children.length>0){
+        [].slice.call(this.$.breadcrumbs.children).forEach(function(child){child.removeEventListener('tap',true)});
+        this.$.breadcrumbs.innerHTML='';
+      }
+      this.inspectedElement = this.path[0];
+      this.path.forEach(function(pathItem, index){
+        var name = document.createElement('span');
+        name.textContent = pathItem.localName;
+        name.classList.add('crumb');
+        if(index!==0){name.addEventListener('tap',function(){
+          this.splice('path', pathItem, 1);
+        }.bind(this))} else {name.classList.add('active');}
+        Polymer.dom(this.$.breadcrumbs).appendChild(name)
+      }.bind(this))
     }
-
   });
 
 </script>
+
