@@ -12,6 +12,8 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
 <link rel="import" href="../iron-flex-layout/iron-flex-layout.html">
 <link rel="import" href="../paper-input/paper-input.html">
 <link rel="import" href="../paper-toggle-button/paper-toggle-button.html">
+<link rel="import" href="../r-dropdown/r-dropdown.html">
+<link rel="import" href="../paper-item/paper-item.html">
 
 <!--
 An element providing a solution to no problem in particular.
@@ -20,33 +22,17 @@ Example:
 
     <r-customizer></r-customizer>
 
-@group Seed Elements
+@group Reportal Elements
 @element r-customizer
 @demo demo/index.html
-@hero hero.svg
 -->
+
 <dom-module id="r-customizer">
 
   <style>
     :host {
       display: block;
       box-sizing: border-box;
-    }
-    /*generic customizer outlines for elements*/
-    *[customizable]:hover{
-      border-radius:inherit;
-      outline: 3px dashed #0b97c4;
-    }
-    *[customizable]:hover::before, * ::content *[customizable]:hover::before{
-      position:absolute;
-      font-size: 10px;
-      padding:5px;
-      line-height:10px;
-      display: inline-block;
-      color:white;
-      z-index:100;
-      top:-20px;left:0;
-      background-color: #0b97c4;
     }
     :host #breadcrumbs{
       @apply(--layout-horizontal-reverse);
@@ -89,13 +75,21 @@ Example:
   Polymer({
 
     is: 'r-customizer',
-    behaviors:[Polymer.Templatizer],
+    behaviors:[],
     listeners: {
-      'change':'_propagateValue'
+      //'change':'_propagateValue',
+      'customizer-reflect':'_propagateValue'
+    },
+    hostAttributes:{
+      'active':true
     },
 
     properties: {
-
+      active:{
+        type:Boolean,
+        value:false,
+        observer:'_toggleActiveState'
+      },
 
       /**
        * An element under inspection currently (the first in the chain from click-target with customizable attribute)
@@ -109,7 +103,11 @@ Example:
        * Array of customizable HTMLElements starting with the click-target and ending with it's topmost customizable host.
        * @type {[HTMLElement]} path
        * */
-      path:Array
+      path:Array,
+      blacklist:{
+        type:Array,
+        value: function(){return ['animationConfig','customizable','entryAnimation','exitAnimation']}
+      }
     },
     observers:[
       '_constructBreadcrumb(path.splices)'
@@ -124,12 +122,17 @@ Example:
     _initCustomizer:function(event, detail){
       this.path = detail.path;
     },
+    _toggleActiveState:function(active){
+      this.toggleAttribute('customizer', active, document.querySelector('body'));
+    },
     /**
      * @method _inspectElement
      * @param {HTMLElement} element element to be inspected.
      * */
     _inspectElement:function(element){
       console.log('inspecting '+ element.localName);
+      [].slice.call(document.querySelectorAll('.hover')).forEach(function(el){el.classList.remove('hover')});
+      element.classList.add('hover');
       var info=element._propertyInfo;
       var nodesL=Polymer.dom(this.$.inspector).childNodes.length;
       if(nodesL>0){
@@ -137,7 +140,7 @@ Example:
       }
       for(var property in info){
         if(property.indexOf('_')===-1
-                && property!=='customizable'
+                && this.blacklist.filter(function(item){return item===property}).length===0
                 && info[property].type
                 && info[property].type.name!=="Function"
                 && info[property].type.name!=="Object"
@@ -156,18 +159,21 @@ Example:
     _stampPropertyTemplate:function(property, element){
       var config = element._config, type=element.getPropertyInfo(property).type.name.toLowerCase();
       if(type==='string' || type === 'number'){
-        var originalProperty;
-        if(element.properties) originalProperty = element.properties[property];
-        if(!originalProperty && element.behaviors) originalProperty=element.behaviors.map(function(behavior){ if(behavior.properties && behavior.properties[property]){return behavior.properties[property]}}).filter(function(item){return typeof item==='object'})[0];
-        if(originalProperty && originalProperty.meta){console.log(originalProperty.meta)}
+        var OP;
+        if(element.properties) OP = element.properties[property];
+        if(!OP && element.behaviors) OP=element.behaviors.map(function(behavior){ if(behavior.properties && behavior.properties[property]){return behavior.properties[property]}}).filter(function(item){return typeof item==='object'})[0];
+        if(OP && OP.meta){console.log(OP.meta)} else {OP={meta:{min:null,max:null,options:null}}}
       }
-      this.templatize(this.$[type+'Template']);
-      switch(element.getPropertyInfo(property).type.name){
-        case 'String': case 'Number':
-        Polymer.dom(this.$.inspector).appendChild(this.stamp({data:{label: property, value:config[property]}}).root);
-        break;
-        case 'Boolean':
-          Polymer.dom(this.$.inspector).appendChild(this.stamp({data:{label: property, checked:config[property]}}).root);
+      switch(type){
+        case 'string':
+          Polymer.dom(this.$.inspector).appendChild(
+                  OP.meta && OP.meta.options? this.create('r-customizer-string-options-property',{property:property, selected:config[property], type:type, options:OP.meta.options}) : this.create('r-customizer-string-property',{property:property, value:config[property], type:type, options:OP.meta.options})
+          );
+          break;
+        case 'number': Polymer.dom(this.$.inspector).appendChild(this.create('r-customizer-number-property',{property:property, value:config[property], type:type, min:OP.meta.min, max:OP.meta.max})); break;
+
+        case 'boolean':
+          Polymer.dom(this.$.inspector).appendChild(this.create('r-customizer-boolean-property',{property:property, checked:config[property], type:type}));
           break;
       }
     },
@@ -175,20 +181,14 @@ Example:
      * Returns changed value to the inspected object
      * */
     _propagateValue:function(event){
-      console.log(Polymer.dom(event));
-      var target = Polymer.dom(event).rootTarget.domHost!==this? Polymer.dom(event).rootTarget.domHost : Polymer.dom(event).rootTarget; //normalize target that fired the event
-      var property = target.prop, el = this.inspectedElement;
-      switch(this.inspectedElement.getPropertyInfo(property).type.name){
-        case 'Boolean':
-          el._configValue('property',target.checked);
-          el[property] = target.checked;
-          break;
-        case 'String': case 'Number':
-        el._configValue('property',target.value);
-        el[property] = target.value;
-        break;
-
+      var el = this.inspectedElement;
+      var detail = Polymer.dom(event).event.detail;
+      console.log(detail)
+      switch(detail.type){
+        case 'string': case 'number': el._configValue(detail.property,detail.value); el[detail.property] = detail.value; break;
+        case 'boolean': console.log('reflect boolean');el._configValue(detail.property,detail.value); el[detail.property] = detail.value; break;
       }
+      el.updateStyles();
     },
     /**
      * Builds a breadcrumb of elements that can be inspected starting with the clicked one.
@@ -213,3 +213,90 @@ Example:
 
 </script>
 
+<dom-module id="r-customizer-string-property">
+  <template strip-whitestpace>
+    <paper-input type="text" value="{{value}}" label="[[property]]"></paper-input>
+  </template>
+</dom-module>
+<dom-module id="r-customizer-number-property">
+  <template strip-whitestpace>
+    <paper-input type="number" value="[[value]]" label="[[property]]" min="[[min]]" max="[[max]]"></paper-input>
+  </template>
+</dom-module>
+<dom-module id="r-customizer-boolean-property">
+  <template strip-whitestpace>
+    <paper-toggle-button checked="[[checked]]" prop="[[property]]">[[property]]</paper-toggle-button>
+  </template>
+</dom-module>
+<dom-module id="r-customizer-string-options-property">
+  <template strip-whitestpace>
+    <r-dropdown label="[[property]]">
+      <paper-listbox class="dropdown-content" selected="[[selected]]" attr-for-selected="value">
+        <template is="dom-repeat" items="[[options]]">
+          <paper-item value="[[item]]">[[item]]</paper-item>
+        </template>
+      </paper-listbox>
+    </r-dropdown>
+  </template>
+</dom-module>
+<script>
+  var Confirmit = Confirmit || {};
+
+  /** @polymerBehavior Confirmit.RCustomizerPropertyBehavior */
+
+  Confirmit.RCustomizerPropertyBehavior = {
+    properties:{
+      value:String,
+      property:String,
+      min:Number,
+      max:Number,
+      checked:Boolean,
+      options:Array,
+      type:String,
+      selected:String
+    },
+    listeners:{
+      'change':'reflectChange',
+      'iron-select':'reflectSelect'
+    },
+    reflectChange:function(event){
+      var target = Polymer.dom(event).rootTarget.domHost!==this? Polymer.dom(event).rootTarget.domHost : Polymer.dom(event).rootTarget; //normalize target that fired the event
+      console.log(target);
+      switch(this.type){
+        case 'boolean': this.fire('customizer-reflect',{property: this.property, value:target.checked, type:this.type}); break;
+        case 'string': case 'number':  this.fire('customizer-reflect',{property: this.property, value:target.value, type:this.type}); break;
+      }
+    },
+    reflectSelect:function(event){
+      var selected = Polymer.dom(event).event.detail.item.value;
+      if(this.selected!==selected){
+        this.fire('customizer-reflect',{property: this.property, value:selected===''?null:selected, type:this.type});
+        this.selected=selected;
+      }
+    }
+  }
+</script>
+<script>
+  Polymer({
+    is: 'r-customizer-string-property',
+    behaviors:[Confirmit.RCustomizerPropertyBehavior]
+  })
+</script>
+<script>
+  Polymer({
+    is: 'r-customizer-string-options-property',
+    behaviors:[Confirmit.RCustomizerPropertyBehavior]
+  })
+</script>
+<script>
+  Polymer({
+    is: 'r-customizer-number-property',
+    behaviors:[Confirmit.RCustomizerPropertyBehavior]
+  })
+</script>
+<script>
+  Polymer({
+    is: 'r-customizer-boolean-property',
+    behaviors:[Confirmit.RCustomizerPropertyBehavior]
+  })
+</script>

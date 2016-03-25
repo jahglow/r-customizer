@@ -9,62 +9,65 @@ Code distributed by Google as part of the polymer project is also
 subject to an additional IP rights grant found at http://polymer.github.io/PATENTS.txt
 -->
 <html>
-  <head>
-    <meta charset="utf-8">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
-    <meta name="viewport" content="width=device-width, minimum-scale=1.0, initial-scale=1.0, user-scalable=yes">
-    <title>r-customizer Demo</title>
-    <script src="../../webcomponentsjs/webcomponents-lite.js"></script>
-    <link rel="import" href="../r-customizer.html">
-    <link rel="import" href="../../r-card.html">
-    <link rel="import" href="../../paper-button/paper-button.html">
-    <link rel="import" href="../../iron-demo-helpers/demo-snippet.html">
-    <link rel="import" href="../../iron-demo-helpers/demo-pages-shared-styles.html">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+  <meta name="viewport" content="width=device-width, minimum-scale=1.0, initial-scale=1.0, user-scalable=yes">
+  <title>r-customizer Demo</title>
+  <script src="../../webcomponentsjs/webcomponents-lite.js"></script>
+  <link rel="import" href="../r-customizer.html">
+  <link rel="import" href="../r-customizer-shared-styles.html">
+  <link rel="import" href="../../r-card/r-card.html">
+  <link rel="import" href="../../radial-gauge/radial-gauge.html">
+  <link rel="import" href="../../paper-button/paper-button.html">
+  <link rel="import" href="../../iron-demo-helpers/demo-snippet.html">
+  <link rel="import" href="../../iron-demo-helpers/demo-pages-shared-styles.html">
 
-    <style is="custom-style" include="demo-pages-shared-styles">
-      demo-snippet {
-        --demo-snippet-demo: {
-          background: var(--paper-grey-200);
-          padding: 8px;
-        };
-        --demo-snippet-code: {
-          max-height: 300px;
-        };
-      }
+  <style is="custom-style" include="demo-pages-shared-styles r-customizer-shared-styles">
+    demo-snippet {
+      --demo-snippet-demo: {
+        background: var(--paper-grey-200);
+        padding: 8px;
+      };
+      --demo-snippet-code: {
+        max-height: 300px;
+      };
+    }
 
-      r-card {
-        width: 100%;
-      }
+    r-card {
+      width: 100%;
+    }
 
 
-      .horizontal {
-        @apply(--layout-horizontal);
-      }
+    .horizontal {
+      @apply(--layout-horizontal);
+    }
 
-      .justified {
-        @apply(--layout-justified);
-      }
-    </style>
+    .justified {
+      @apply(--layout-justified);
+    }
+  </style>
 
-  </head>
-  <body unresolved>
+</head>
+<body unresolved>
 
-    <r-customizer></r-customizer>
+<r-customizer style="width:300px; position:absolute; left:16px"></r-customizer>
+<div class="vertical-section-container centered">
 
-    <h3>A r-card with a simple heading, header image, body content, and actions. Header image aspect-ratio is 1:1</h3>
-    <demo-snippet>
-      <template>
-        <r-card heading="Emmental" image-sizing="cover" image-aspect-ratio="1:1" image="http://placehold.it/350x350/FFC107/000000" scrim="2">
-          <div class="card-content">
-            Emmentaler or Emmental is a yellow, medium-hard cheese that originated in the area around Emmental, Switzerland. It is one of the cheeses of Switzerland, and is sometimes known as Swiss cheese.
-          </div>
-          <div class="card-actions">
-            <paper-button>Share</paper-button>
-            <paper-button>Explore!</paper-button>
-          </div>
-        </r-card>
-      </template>
-    </demo-snippet>
-
-    </body>
+  <h3>A r-card with a simple heading, header image, body content, and actions. Header image aspect-ratio is 1:1</h3>
+  <demo-snippet>
+    <template>
+      <r-card heading="Emmental" image-sizing="cover" image-aspect-ratio="16:9" image="http://placehold.it/350x350/FFC107/000000" scrim="2" customizable>
+        <div class="card-content">
+          <radial-gauge value="76%" min="0" max="100" color="green" range customizable></radial-gauge>
+        </div>
+        <div class="card-actions">
+          <paper-button>Share</paper-button>
+          <paper-button>Explore!</paper-button>
+        </div>
+      </r-card>
+    </template>
+  </demo-snippet>
+</div>
+</body>
 </html>

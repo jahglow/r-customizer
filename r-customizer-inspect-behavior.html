@@ -11,33 +11,42 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
 <link rel="import" href="../polymer/polymer.html">
 
 <script>
+
     var Confirmit = Confirmit || {};
 
     /** @polymerBehavior Confirmit.RCustomizerInspectBehavior */
+
     Confirmit.RCustomizerInspectBehavior = {
 
         listeners:{
-            'tap':'_reportTap'
+            'tap':'_reportTapToCustomizer'
         },
         properties:{
-
+            /**
+             * If set to true, and there is an `r-customizer` instance on the page, the element from Reportal Elements group with `customizable` property will have a border on hover and be inspected on tap
+             * */
             customizable:{
                 type:Boolean,
                 value:false,
                 reflectToAttribute:true
             }
         },
+
         /**
-         * @event {CustomEvent} iron-signal
+         * @param {Event} event `tap` event anywhere inside an element which implements this behavior
          * */
-        _reportTap:function(event){
+        _reportTapToCustomizer:function(event){
             console.log(Polymer.dom(event));
             event.stopImmediatePropagation();
-            var _path = Polymer.dom(event).path;
-            var path = _path.filter(function(pathItem){ return pathItem.customizable});
-            console.log(path);
-            if(path.length>0){this.fire('iron-signal',{name: 'customize', data:{path: path}})}
+            var _path = Polymer.dom(event).path.filter(function(pathItem){ return pathItem.customizable});
+            if(_path.length>0){this.fire('iron-signal',{name: 'customize', data:{path: _path}})}
         }
+        /**
+         * Fired when a `customizable` element is tapped
+         * @event iron-signal-customize
+         * @detail {{path: Array}} detail of the event
+         * */
+
     };
 
 </script>
